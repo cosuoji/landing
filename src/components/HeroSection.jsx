@@ -268,8 +268,8 @@ export default function ScrollSnapStackCarousel() {
   return (
     <div className="w-full select-none">
       <div className="px-4 md:px-8 pt-3 md:pt-5 flex justify-between">
-        <span className="text-sm md:text-xl font-semibold text-gray-800">Project 2025</span>
-        <span className="text-sm md:text-xl font-semibold text-gray-800">Edition 01</span>
+        <span className="text-sm md:text-xl font-semibold text-gray-800">PLACEHOLDER TEXT</span>
+        <span className="text-sm md:text-xl font-semibold text-gray-800">PLACEHOLDER TEXT</span>
       </div>
 
       <div
