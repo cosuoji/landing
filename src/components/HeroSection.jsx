@@ -41,6 +41,11 @@ const isMobile =
   typeof window !== 'undefined' &&
   window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
+  const isMobileDevice =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+
 const RulerStrip = () => (
   <div className="w-full flex justify-between items-end h-6">
     {Array.from({ length: 60 }).map((_, i) => (
@@ -57,21 +62,21 @@ const SlideStack = ({ slide, onClick }) => {
   /* 🔹 NEW: mobile tap hint state */
   const [showTapHint, setShowTapHint] = useState(false);
 
-  const isTouch = isTouchDevice;
+  const isMobile = isMobileDevice;
   const dragThreshold = 10;
   const dragStart = useRef({ x: 0, y: 0 });
 
   /* 🔹 NEW: show tap hint briefly on mount (mobile only) */
   useEffect(() => {
-    if (!isTouch) return;
+    if (!isMobile) return;
     setShowTapHint(true);
     const t = setTimeout(() => setShowTapHint(false), 2200);
     return () => clearTimeout(t);
-  }, [isTouch]);
+  }, [isMobile]);
 
   useEffect(() => {
     const el = localRef.current;
-    if (!el || isTouch) return;
+    if (!el || isMobile) return;
 
     const onMove = (e) => {
       const r = el.getBoundingClientRect();
@@ -90,7 +95,7 @@ const SlideStack = ({ slide, onClick }) => {
       el.removeEventListener('mouseleave', onLeave);
       el.removeEventListener('mousemove', onMove);
     };
-  }, [isTouch]);
+  }, [isMobile]);
 
   const handleMouseDown = (e) => {
     dragStart.current = { x: e.clientX, y: e.clientY };
@@ -135,7 +140,7 @@ const SlideStack = ({ slide, onClick }) => {
         />
 
         {/* DESKTOP hover label */}
-        {!isTouch && hovered && (
+        {!isMobile && hovered && (
           <motion.div
             className="absolute pointer-events-none flex items-center justify-center
                        w-28 h-28 rounded-full bg-white text-black text-xs uppercase tracking-widest"
@@ -149,7 +154,7 @@ const SlideStack = ({ slide, onClick }) => {
 
         {/* 🔹 NEW: MOBILE TAP TO VIEW */}
         <AnimatePresence>
-          {isTouch && showTapHint && (
+          {isMobile && showTapHint && (
             <motion.div
               className="absolute inset-0 flex items-center justify-center pointer-events-none"
               initial={{ opacity: 0 }}
@@ -177,7 +182,6 @@ const SlideStack = ({ slide, onClick }) => {
     </div>
   );
 };
-
 
 export function PackModal({ slide, index }) {
   const navigate = useNavigate();
@@ -285,7 +289,7 @@ export default function ScrollSnapStackCarousel() {
   const [active, setActive] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window;
+const isMobile = isMobileDevice;
 
   useEffect(() => {
     const slider = scrollRef.current;
