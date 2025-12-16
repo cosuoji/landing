@@ -1,7 +1,10 @@
-// ScrollSnapStackCarousel.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
+
+/* ----------------------------------
+   DATA
+---------------------------------- */
 
 const slides = [
   {
@@ -36,127 +39,146 @@ const slides = [
   },
 ];
 
+/* ----------------------------------
+   DEVICE DETECTION (CORRECT WAY)
+---------------------------------- */
+
+const isMobile =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+/* ----------------------------------
+   UI BITS
+---------------------------------- */
+
 const RulerStrip = () => (
   <div className="w-full flex justify-between items-end h-6">
     {Array.from({ length: 60 }).map((_, i) => (
-      <div key={i} className={`w-px bg-gray-800 ${i % 5 === 0 ? 'h-6' : 'h-4'}`} />
+      <div
+        key={i}
+        className={`w-px bg-gray-800 ${i % 5 === 0 ? 'h-6' : 'h-4'}`}
+      />
     ))}
   </div>
 );
 
+/* ----------------------------------
+   SLIDE STACK
+---------------------------------- */
+
 const SlideStack = ({ slide, onClick }) => {
   const localRef = useRef(null);
   const [hovered, setHovered] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window;
-  const dragThreshold = 10;
+  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
+
+  /* 🔹 Mobile pulse hint */
+  const [pulse, setPulse] = useState(false);
+
   const dragStart = useRef({ x: 0, y: 0 });
-  const dragMoved = useRef(false);
+  const dragThreshold = 10;
 
+  /* Play pulse once on mobile */
   useEffect(() => {
-    const el = localRef.current;
-    if (!el || isTouch) return;
-    const onMove = (e) => {
-      const r = el.getBoundingClientRect();
-      setPos({ x: e.clientX - r.left, y: e.clientY - r.top });
-    };
-    const onEnter = () => setHovered(true);
-    const onLeave = () => setHovered(false);
-    el.addEventListener('mouseenter', onEnter);
-    el.addEventListener('mouseleave', onLeave);
-    el.addEventListener('mousemove', onMove);
-    return () => {
-      el.removeEventListener('mouseenter', onEnter);
-      el.removeEventListener('mouseleave', onLeave);
-      el.removeEventListener('mousemove', onMove);
-    };
-  }, [isTouch]);
+    if (!isMobile) return;
+    setPulse(true);
+    const t = setTimeout(() => setPulse(false), 1600);
+    return () => clearTimeout(t);
+  }, []);
 
-  const handleMouseDown = (e) => {
-    dragMoved.current = false;
+  /* Desktop hover tracking */
+  useEffect(() => {
+    if (!localRef.current || isMobile) return;
+
+    const el = localRef.current;
+    const move = (e) => {
+      const r = el.getBoundingClientRect();
+      setCursorPos({ x: e.clientX - r.left, y: e.clientY - r.top });
+    };
+
+    el.addEventListener('mouseenter', () => setHovered(true));
+    el.addEventListener('mouseleave', () => setHovered(false));
+    el.addEventListener('mousemove', move);
+
+    return () => el.removeEventListener('mousemove', move);
+  }, []);
+
+  const handleDown = (e) => {
     dragStart.current = { x: e.clientX, y: e.clientY };
+    setPulse(false);
   };
-  const handleMouseUp = (e) => {
+
+  const handleUp = (e) => {
     const dx = Math.abs(e.clientX - dragStart.current.x);
     const dy = Math.abs(e.clientY - dragStart.current.y);
     if (dx < dragThreshold && dy < dragThreshold) onClick();
   };
 
-  const imgPop = {
-    left:  { scale: hovered ? 1.03 : 1, x: hovered ? -4 : 0 },
-    center:{ scale: hovered ? 1.05 : 1 },
-    right: { scale: hovered ? 1.03 : 1, x: hovered ? 4 : 0 },
-  };
-
   return (
     <div
       className="relative w-[80%] h-5/6 cursor-pointer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
+      onMouseDown={handleDown}
+      onMouseUp={handleUp}
     >
+      {/* LEFT IMAGE */}
       <motion.img
         src={slide.left}
-        alt="left"
         className="absolute left-0 top-1/2 -translate-y-1/2 w-[38%] h-4/5 object-cover rounded-lg shadow-lg"
-        animate={imgPop.left}
-        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+        animate={{ scale: hovered ? 1.03 : 1, x: hovered ? -4 : 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 18 }}
       />
+
+      {/* CENTER IMAGE */}
       <div
         ref={localRef}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[46%] h-full"
-        style={{ zIndex: 2 }}
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[46%] h-full z-10"
       >
         <motion.img
           src={slide.center}
-          alt="center"
           className="w-full h-full object-cover rounded-xl shadow-2xl"
-          animate={imgPop.center}
-          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+          animate={
+            isMobile && pulse
+              ? { scale: [1, 1.03, 1], y: [0, -6, 0] }
+              : { scale: hovered ? 1.05 : 1 }
+          }
+          transition={
+            isMobile
+              ? { duration: 1.4, ease: 'easeInOut' }
+              : { type: 'spring', stiffness: 320, damping: 20 }
+          }
         />
-        {hovered && (
+
+        {/* DESKTOP VIEW BUBBLE */}
+        {!isMobile && hovered && (
           <motion.div
             className="absolute pointer-events-none flex items-center justify-center
-                       w-28 h-28 rounded-full bg-white text-black text-xs uppercase tracking-widest z-20"
-            style={{ left: pos.x - 56, top: pos.y - 56 }}
+                       w-28 h-28 rounded-full bg-white text-black text-xs uppercase tracking-widest"
+            style={{ left: cursorPos.x - 56, top: cursorPos.y - 56 }}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           >
             View {slide.caption.split(' ')[0]}
           </motion.div>
         )}
       </div>
+
+      {/* RIGHT IMAGE */}
       <motion.img
         src={slide.right}
-        alt="right"
         className="absolute right-0 top-1/2 -translate-y-1/2 w-[38%] h-4/5 object-cover rounded-lg shadow-lg"
-        animate={imgPop.right}
-        transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+        animate={{ scale: hovered ? 1.03 : 1, x: hovered ? 4 : 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 18 }}
       />
     </div>
   );
 };
 
+/* ----------------------------------
+   MODAL
+---------------------------------- */
+
 export function PackModal({ slide, index }) {
   const navigate = useNavigate();
-  const closeModal = () => navigate(-1);
-
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.15,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const close = () => navigate(-1);
 
   return (
     <AnimatePresence>
@@ -165,7 +187,7 @@ export function PackModal({ slide, index }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={closeModal}
+        onClick={close}
       >
         <motion.div
           layoutId={`slide-${index}`}
@@ -174,91 +196,59 @@ export function PackModal({ slide, index }) {
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         >
-       {/* Close Button Icon */}
-        <button
-          onClick={closeModal}
-          className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-gray-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+          <button
+            onClick={close}
+            className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-lg"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+            ←
+          </button>
 
+          <img src={slide.center} className="rounded-xl mb-4 w-full h-72 object-cover" />
+          <h2 className="text-2xl font-bold">{slide.caption}</h2>
+          <p className="text-gray-600 mt-2">{slide.description}</p>
 
-          <motion.div
-            className="flex flex-col gap-4"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Center Image */}
-            <motion.img
-              src={slide.center}
-              className="rounded-xl mb-4 w-full object-cover h-64 md:h-80"
-              variants={itemVariants}
+          <ul className="list-disc ml-5 mt-4 space-y-1">
+            {slide.features.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+
+          {slide.extraImage && (
+            <img
+              src={slide.extraImage}
+              className="rounded-lg w-full h-60 object-cover mt-4"
             />
-
-            {/* Title */}
-            <motion.h2 className="text-2xl font-bold" variants={itemVariants}>
-              {slide.caption}
-            </motion.h2>
-
-            {/* Description */}
-            <motion.p className="text-gray-600" variants={itemVariants}>
-              {slide.description}
-            </motion.p>
-
-            {/* Features */}
-            <motion.ul className="list-disc ml-5 text-gray-700 space-y-1" variants={itemVariants}>
-              {slide.features?.map((feature, i) => (
-                <motion.li key={i} variants={itemVariants}>
-                  {feature}
-                </motion.li>
-              ))}
-            </motion.ul>
-
-            {/* Extra Image */}
-            {slide.extraImage && (
-              <motion.img
-                src={slide.extraImage}
-                className="rounded-lg w-full h-60 object-cover"
-                variants={itemVariants}
-              />
-            )}
-          </motion.div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
 
+/* ----------------------------------
+   MAIN CAROUSEL
+---------------------------------- */
+
 export default function ScrollSnapStackCarousel() {
   const scrollRef = useRef(null);
   const [active, setActive] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window;
 
   useEffect(() => {
-    const slider = scrollRef.current;
-    if (!slider) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
     const io = new IntersectionObserver(
       (entries) => {
-        const visible = entries.find((e) => e.isIntersecting);
-        if (visible) setActive(Number(visible.target.dataset.idx));
+        const v = entries.find((e) => e.isIntersecting);
+        if (v) setActive(Number(v.target.dataset.idx));
       },
-      { root: slider, threshold: 0.6 }
+      { root: el, threshold: 0.6 }
     );
-    slider.querySelectorAll('[data-idx]').forEach((el) => io.observe(el));
+
+    el.querySelectorAll('[data-idx]').forEach((n) => io.observe(n));
     return () => io.disconnect();
   }, []);
 
@@ -267,43 +257,42 @@ export default function ScrollSnapStackCarousel() {
 
   return (
     <div className="w-full select-none">
-      <div className="px-4 md:px-8 pt-3 md:pt-5 flex justify-between">
-        <span className="text-sm md:text-xl font-semibold text-gray-800">PLACEHOLDER TEXT</span>
-        <span className="text-sm md:text-xl font-semibold text-gray-800">PLACEHOLDER TEXT</span>
+      <div className="flex justify-between px-6 pt-4">
+        <span className="font-semibold">PROJECT 2025</span>
+        <span className="font-semibold">EDITION 01</span>
       </div>
 
       <div
         ref={scrollRef}
-        className="flex overflow-x-auto snap-x snap-mandatory w-full h-[45vh] md:h-[65vh] px-4 scrollbar-hide"
+        className="flex overflow-x-auto snap-x snap-mandatory h-[65vh] px-4"
       >
         {slides.map((s, i) => (
-          <div key={s.center} data-idx={i} className="snap-center shrink-0 w-full flex items-center justify-center">
+          <div
+            key={s.center}
+            data-idx={i}
+            className="snap-center shrink-0 w-full flex justify-center items-center"
+          >
             <SlideStack slide={s} onClick={() => navigate(s.link)} />
           </div>
         ))}
       </div>
 
       <RulerStrip />
-      <div className="h-16 bg-white flex items-center justify-between px-6">
-        <span
-          className="text-gray-400 cursor-pointer hover:text-gray-600 uppercase"
-          onClick={() => scrollRef.current?.scrollTo({ left: prev(active) * scrollRef.current.clientWidth, behavior: 'smooth' })}
-        >
+
+      <div className="h-16 flex items-center justify-between px-6">
+        <span onClick={() => scrollRef.current.scrollTo({ left: prev(active) * scrollRef.current.clientWidth, behavior: 'smooth' })}>
           {slides[prev(active)].caption}
         </span>
-        <span className="text-3xl font-bold tracking-wide uppercase">{slides[active].caption}</span>
-        <span
-          className="text-gray-400 cursor-pointer hover:text-gray-600 uppercase"
-          onClick={() => scrollRef.current?.scrollTo({ left: next(active) * scrollRef.current.clientWidth, behavior: 'smooth' })}
-        >
+        <span className="text-3xl font-bold">{slides[active].caption}</span>
+        <span onClick={() => scrollRef.current.scrollTo({ left: next(active) * scrollRef.current.clientWidth, behavior: 'smooth' })}>
           {slides[next(active)].caption}
         </span>
       </div>
+
       <RulerStrip />
 
-      {/* Route-based modals */}
-      {slides.map((slide, i) =>
-        location.pathname === slide.link ? <PackModal key={i} slide={slide} index={i} /> : null
+      {slides.map((s, i) =>
+        location.pathname === s.link ? <PackModal key={i} slide={s} index={i} /> : null
       )}
     </div>
   );
