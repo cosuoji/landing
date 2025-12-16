@@ -1,8 +1,7 @@
 // ScrollSnapStackCarousel.jsx
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-
 
 const slides = [
   {
@@ -37,14 +36,9 @@ const slides = [
   },
 ];
 
-const isMobile =
+const isMobileDevice =
   typeof window !== 'undefined' &&
   window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-
-  const isMobileDevice =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-
 
 const RulerStrip = () => (
   <div className="w-full flex justify-between items-end h-6">
@@ -54,6 +48,7 @@ const RulerStrip = () => (
   </div>
 );
 
+// Tap Icon Component
 const TapIcon = () => (
   <svg
     width="26"
@@ -71,25 +66,25 @@ const TapIcon = () => (
   </svg>
 );
 
-
-
 const SlideStack = ({ slide, onClick }) => {
   const localRef = useRef(null);
   const [hovered, setHovered] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
-
-  /* 🔹 NEW: mobile tap hint state */
   const [showTapHint, setShowTapHint] = useState(false);
-
+  const [scrolling, setScrolling] = useState(false);
   const isMobile = isMobileDevice;
+
   const dragThreshold = 10;
   const dragStart = useRef({ x: 0, y: 0 });
 
-  /* 🔹 NEW: show tap hint briefly on mount (mobile only) */
+  const controls = useAnimation();
+
+  /* 🔹 Show tap icon permanently on mobile */
   useEffect(() => {
     if (isMobile) setShowTapHint(true);
   }, [isMobile]);
 
+  /* 🔹 Desktop hover logic */
   useEffect(() => {
     const el = localRef.current;
     if (!el || isMobile) return;
@@ -123,6 +118,30 @@ const SlideStack = ({ slide, onClick }) => {
     if (dx < dragThreshold && dy < dragThreshold) onClick();
   };
 
+  /* 🔹 Magnetic pull effect */
+  const handleTouchStart = () => {
+    controls.start({ scale: 1.03 });
+    navigator.vibrate?.(10); // small haptic feedback
+  };
+  const handleTouchEnd = () => controls.start({ scale: 1 });
+  
+  /* 🔹 Scroll fade effect */
+  useEffect(() => {
+    if (!isMobile) return;
+    const onScroll = () => {
+      setScrolling(true);
+      controls.start({ opacity: 0.3 });
+      clearTimeout(window._scrollTimeout);
+      window._scrollTimeout = setTimeout(() => {
+        setScrolling(false);
+        controls.start({ opacity: 1 });
+      }, 200);
+    };
+    const container = localRef.current?.parentElement?.parentElement;
+    container?.addEventListener('scroll', onScroll);
+    return () => container?.removeEventListener('scroll', onScroll);
+  }, [isMobile, controls]);
+
   const imgPop = {
     left:  { scale: hovered ? 1.03 : 1, x: hovered ? -4 : 0 },
     center:{ scale: hovered ? 1.05 : 1 },
@@ -136,6 +155,8 @@ const SlideStack = ({ slide, onClick }) => {
       onMouseLeave={() => setHovered(false)}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {/* LEFT */}
       <motion.img
@@ -152,7 +173,7 @@ const SlideStack = ({ slide, onClick }) => {
         <motion.img
           src={slide.center}
           className="w-full h-full object-cover rounded-xl shadow-2xl"
-          animate={imgPop.center}
+          animate={controls}
         />
 
         {/* DESKTOP hover label */}
@@ -168,9 +189,8 @@ const SlideStack = ({ slide, onClick }) => {
           </motion.div>
         )}
 
-        {/* 🔹 NEW: MOBILE TAP TO VIEW */}
-        <AnimatePresence>
-         {isMobile && showTapHint && (
+        {/* MOBILE Tap Icon */}
+        {isMobile && showTapHint && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <motion.div
               className="relative w-14 h-14 rounded-full bg-black/70 flex items-center justify-center shadow-lg"
@@ -183,13 +203,10 @@ const SlideStack = ({ slide, onClick }) => {
                 animate={{ scale: [1, 1.6], opacity: [0.4, 0] }}
                 transition={{ duration: 1.4, repeat: Infinity }}
               />
-
               <TapIcon />
             </motion.div>
           </div>
-                )}
-
-        </AnimatePresence>
+        )}
       </div>
 
       {/* RIGHT */}
@@ -238,23 +255,22 @@ export function PackModal({ slide, index }) {
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         >
-       {/* Close Button Icon */}
-        <button
-          onClick={closeModal}
-          className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-gray-700"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+          {/* Close Button Icon */}
+          <button
+            onClick={closeModal}
+            className="absolute top-4 right-4 p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6 text-gray-700"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
 
           <motion.div
             className="flex flex-col gap-4"
@@ -308,7 +324,7 @@ export default function ScrollSnapStackCarousel() {
   const [active, setActive] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-const isMobile = isMobileDevice;
+  const isMobile = isMobileDevice;
 
   useEffect(() => {
     const slider = scrollRef.current;
