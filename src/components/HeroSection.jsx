@@ -54,6 +54,25 @@ const RulerStrip = () => (
   </div>
 );
 
+const TapIcon = () => (
+  <svg
+    width="26"
+    height="26"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="white"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M8 13v-2a2 2 0 1 1 4 0v1" />
+    <path d="M12 12v-3a2 2 0 1 1 4 0v3" />
+    <path d="M16 12v-1a2 2 0 1 1 4 0v6a6 6 0 0 1-6 6h-2a6 6 0 0 1-6-6v-4a2 2 0 1 1 4 0" />
+  </svg>
+);
+
+
+
 const SlideStack = ({ slide, onClick }) => {
   const localRef = useRef(null);
   const [hovered, setHovered] = useState(false);
@@ -68,10 +87,7 @@ const SlideStack = ({ slide, onClick }) => {
 
   /* 🔹 NEW: show tap hint briefly on mount (mobile only) */
   useEffect(() => {
-    if (!isMobile) return;
-    setShowTapHint(true);
-    const t = setTimeout(() => setShowTapHint(false), 2200);
-    return () => clearTimeout(t);
+    if (isMobile) setShowTapHint(true);
   }, [isMobile]);
 
   useEffect(() => {
@@ -154,22 +170,25 @@ const SlideStack = ({ slide, onClick }) => {
 
         {/* 🔹 NEW: MOBILE TAP TO VIEW */}
         <AnimatePresence>
-          {isMobile && showTapHint && (
+         {isMobile && showTapHint && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <motion.div
-              className="absolute inset-0 flex items-center justify-center pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              className="relative w-14 h-14 rounded-full bg-black/70 flex items-center justify-center shadow-lg"
+              animate={{ scale: [0.95, 1, 0.95] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
             >
+              {/* Ripple */}
               <motion.div
-                className="px-4 py-2 rounded-full bg-black/70 text-white text-xs uppercase tracking-widest"
-                animate={{ scale: [0.9, 1, 0.95] }}
-                transition={{ duration: 1.2 }}
-              >
-                Tap to view
-              </motion.div>
+                className="absolute inset-0 rounded-full border border-white/30"
+                animate={{ scale: [1, 1.6], opacity: [0.4, 0] }}
+                transition={{ duration: 1.4, repeat: Infinity }}
+              />
+
+              <TapIcon />
             </motion.div>
-          )}
+          </div>
+                )}
+
         </AnimatePresence>
       </div>
 
