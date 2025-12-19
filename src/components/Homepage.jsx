@@ -67,8 +67,8 @@ export default function LandingPage({slides}) {
               <li key={section}>
                 <button
                   onClick={() => handleAnchorClick(section)}
-                  className={`hover:text-blue-600 ${
-                    active === section ? "text-blue-600 font-semibold" : ""
+                  className={`hover:text-black-600 ${
+                    active === section ? "text-black-600 font-semibold" : ""
                   }`}
                 >
                   {section.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -103,7 +103,7 @@ export default function LandingPage({slides}) {
                 key={section}
                 onClick={() => handleAnchorClick(section)}
                 className={`text-xl font-semibold ${
-                  active === section ? "text-blue-600" : "text-gray-800"
+                  active === section ? "text-black-600" : "text-gray-800"
                 }`}
               >
                 {section.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
@@ -178,7 +178,7 @@ export default function LandingPage({slides}) {
           <div className="p-6 rounded-2xl shadow bg-gray-100">
             <input type="text" placeholder="Your email" className="w-full p-3 rounded mb-4" />
             <textarea placeholder="Message" className="w-full p-3 rounded h-32 mb-4" />
-            <button className="w-full py-3 bg-black text-white rounded-xl hover:bg-blue-700">
+            <button className="w-full py-3 bg-black text-white rounded-xl hover:bg-black-700">
               Send Message
             </button>
           </div>
